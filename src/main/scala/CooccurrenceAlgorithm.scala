@@ -29,7 +29,7 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
 
   def train(sc: SparkContext, data: PreparedData): CooccurrenceModel = {
 
-    val itemStringIntMap = BiMap.stringInt(data.items.keys)
+    val itemStringIntMap = BiMap.stringInt(data.viewEvents.map(_.item))
 
     val topCooccurrences = trainCooccurrence(
       events = data.viewEvents,
@@ -38,8 +38,8 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
     )
 
     // collect Item as Map and convert ID to Int index
-    val items: Map[Int, Item] = data.items.map { case (id, item) =>
-      (itemStringIntMap(id), item)
+    val items: Map[Int, Item] = data.viewEvents.map(_.item).map { case (id) =>
+      (itemStringIntMap(id), Item(None))
     }.collectAsMap.toMap
 
     new CooccurrenceModel(
