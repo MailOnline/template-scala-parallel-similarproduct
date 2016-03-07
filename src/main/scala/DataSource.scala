@@ -23,42 +23,6 @@ class DataSource(val dsp: DataSourceParams)
 
   override
   def readTraining(sc: SparkContext): TrainingData = {
-
-    // create a RDD of (entityID, User)
-    val usersRDD: RDD[(String, User)] = PEventStore.aggregateProperties(
-      appName = dsp.appName,
-      entityType = "user"
-    )(sc).map { case (entityId, properties) =>
-      val user = try {
-        User()
-      } catch {
-        case e: Exception => {
-          logger.error(s"Failed to get properties ${properties} of" +
-            s" user ${entityId}. Exception: ${e}.")
-          throw e
-        }
-      }
-      (entityId, user)
-    }.cache()
-
-    // create a RDD of (entityID, Item)
-    val itemsRDD: RDD[(String, Item)] = PEventStore.aggregateProperties(
-      appName = dsp.appName,
-      entityType = "item"
-    )(sc).map { case (entityId, properties) =>
-      val item = try {
-        // Assume categories is optional property of item.
-        Item(categories = properties.getOpt[List[String]]("categories"))
-      } catch {
-        case e: Exception => {
-          logger.error(s"Failed to get properties ${properties} of" +
-            s" item ${entityId}. Exception: ${e}.")
-          throw e
-        }
-      }
-      (entityId, item)
-    }.cache()
-
     // get all "user" "view" "item" events
     val viewEventsRDD: RDD[ViewEvent] = PEventStore.find(
       appName = dsp.appName,
@@ -87,8 +51,6 @@ class DataSource(val dsp: DataSourceParams)
       }.cache()
 
     new TrainingData(
-      users = usersRDD,
-      items = itemsRDD,
       viewEvents = viewEventsRDD
     )
   }
@@ -101,13 +63,9 @@ case class Item(categories: Option[List[String]])
 case class ViewEvent(user: String, item: String, t: Long)
 
 class TrainingData(
-  val users: RDD[(String, User)],
-  val items: RDD[(String, Item)],
   val viewEvents: RDD[ViewEvent]
 ) extends Serializable {
   override def toString = {
-    s"users: [${users.count()} (${users.take(2).toList}...)]" +
-    s"items: [${items.count()} (${items.take(2).toList}...)]" +
     s"viewEvents: [${viewEvents.count()}] (${viewEvents.take(2).toList}...)"
   }
 }

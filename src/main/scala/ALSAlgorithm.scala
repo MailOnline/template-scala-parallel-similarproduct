@@ -50,21 +50,15 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       s"viewEvents in PreparedData cannot be empty." +
       " Please check if DataSource generates TrainingData" +
       " and Preprator generates PreparedData correctly.")
-    require(!data.users.take(1).isEmpty,
-      s"users in PreparedData cannot be empty." +
-      " Please check if DataSource generates TrainingData" +
-      " and Preprator generates PreparedData correctly.")
-    require(!data.items.take(1).isEmpty,
-      s"items in PreparedData cannot be empty." +
-      " Please check if DataSource generates TrainingData" +
-      " and Preprator generates PreparedData correctly.")
     // create User and item's String ID to integer index BiMap
-    val userStringIntMap = BiMap.stringInt(data.users.keys)
-    val itemStringIntMap = BiMap.stringInt(data.items.keys)
+    val userStringIntMap = BiMap.stringInt(data.viewEvents.map(_.user))
+
+    val veItems = data.viewEvents.map(_.item).cache()
+    val itemStringIntMap = BiMap.stringInt(veItems)
 
     // collect Item as Map and convert ID to Int index
-    val items: Map[Int, Item] = data.items.map { case (id, item) =>
-      (itemStringIntMap(id), item)
+    val items: Map[Int, Item] = veItems.map { case (id) =>
+      (itemStringIntMap(id), Item(None))
     }.collectAsMap.toMap
 
     val mllibRatings = data.viewEvents
