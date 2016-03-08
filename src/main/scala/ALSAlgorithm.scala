@@ -219,14 +219,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
     whiteList.map(_.contains(i)).getOrElse(true) &&
     blackList.map(!_.contains(i)).getOrElse(true) &&
     // discard items in query as well
-    (!queryList.contains(i)) &&
-    // filter categories
-    categories.map { cat =>
-      items(i).categories.map { itemCat =>
-        // keep this item if has ovelap categories with the query
-        !(itemCat.toSet.intersect(cat).isEmpty)
-      }.getOrElse(false) // discard this item if it has no categories
-    }.getOrElse(true)
+    (!queryList.contains(i))
   }
 
 }
