@@ -3,6 +3,7 @@ package org.template.similarproduct
 import io.prediction.controller.P2LAlgorithm
 import io.prediction.controller.Params
 import io.prediction.data.storage.BiMap
+import org.apache.spark.storage.StorageLevel
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
@@ -53,7 +54,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
     // create User and item's String ID to integer index BiMap
     val userStringIntMap = BiMap.stringInt(data.viewEvents.map(_.user))
 
-    val veItems = data.viewEvents.map(_.item).cache()
+    val veItems = data.viewEvents.map(_.item).persist(StorageLevel.MEMORY_AND_DISK)
     val itemStringIntMap = BiMap.stringInt(veItems)
 
     // collect Item as Map and convert ID to Int index
@@ -84,7 +85,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
         // MLlibRating requires integer index for user and item
         MLlibRating(u, i, v)
       }
-      .cache()
+      .persist(StorageLevel.MEMORY_AND_DISK)
 
     // MLLib ALS cannot handle empty training data.
     require(!mllibRatings.take(1).isEmpty,
