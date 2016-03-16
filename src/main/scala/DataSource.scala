@@ -1,5 +1,7 @@
 package org.template.similarproduct
 
+import com.github.nscala_time.time.Imports._
+
 import io.prediction.controller.PDataSource
 import io.prediction.controller.EmptyEvaluationInfo
 import io.prediction.controller.EmptyActualResult
@@ -14,7 +16,11 @@ import org.apache.spark.storage.StorageLevel._
 
 import grizzled.slf4j.Logger
 
-case class DataSourceParams(appName: String) extends Params
+case class DataSourceParams(
+  appName: String,
+  startTime: Option[DateTime],
+  untilTime: Option[DateTime]
+) extends Params
 
 class DataSource(val dsp: DataSourceParams)
   extends PDataSource[TrainingData,
@@ -27,6 +33,8 @@ class DataSource(val dsp: DataSourceParams)
     // get all "user" "view" "item" events
     val viewEventsRDD: RDD[ViewEvent] = PEventStore.find(
       appName = dsp.appName,
+      startTime = dsp.startTime,
+      untilTime = dsp.untilTime,
       entityType = Some("user"),
       eventNames = Some(List("view")),
       // targetEntityType is optional field of an event.
