@@ -57,7 +57,7 @@ class DataSource(val dsp: DataSourceParams)
           }
         }
         viewEvent
-      }.persist(MEMORY_AND_DISK)
+      }.persist(MEMORY_AND_DISK_SER)
 
     new TrainingData(
       viewEvents = viewEventsRDD
