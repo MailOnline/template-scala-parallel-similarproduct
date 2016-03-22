@@ -37,10 +37,13 @@ class DataSource(val dsp: DataSourceParams)
     val dtFormatter =
       ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed()
 
+    val startTime = dtFormatter.parseDateTime(dsp.startTime)
+    logger.info(s"Using events since ${startTime}")
+
     // get all "user" "view" "item" events
     val viewEventsRDD: RDD[ViewEvent] = PEventStore.find(
       appName = dsp.appName,
-      startTime = Some(dtFormatter.parseDateTime(dsp.startTime)),
+      startTime = Some(startTime),
       untilTime = dsp.untilTime,
       entityType = Some("user"),
       eventNames = Some(List("view")),
