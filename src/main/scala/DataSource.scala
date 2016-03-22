@@ -2,12 +2,15 @@ package org.template.similarproduct
 
 import com.github.nscala_time.time.Imports._
 
+import org.joda.time.format.ISODateTimeFormat
+
 import io.prediction.controller.PDataSource
 import io.prediction.controller.EmptyEvaluationInfo
 import io.prediction.controller.EmptyActualResult
 import io.prediction.controller.Params
 import io.prediction.data.storage.Event
 import io.prediction.data.store.PEventStore
+import io.prediction.data._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
@@ -18,7 +21,7 @@ import grizzled.slf4j.Logger
 
 case class DataSourceParams(
   appName: String,
-  startTime: Option[DateTime],
+  startTime: String,
   untilTime: Option[DateTime]
 ) extends Params
 
@@ -30,10 +33,14 @@ class DataSource(val dsp: DataSourceParams)
 
   override
   def readTraining(sc: SparkContext): TrainingData = {
+
+    val dtFormatter =
+      ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed()
+
     // get all "user" "view" "item" events
     val viewEventsRDD: RDD[ViewEvent] = PEventStore.find(
       appName = dsp.appName,
-      startTime = dsp.startTime,
+      startTime = Some(dtFormatter.parseDateTime(dsp.startTime)),
       untilTime = dsp.untilTime,
       entityType = Some("user"),
       eventNames = Some(List("view")),
