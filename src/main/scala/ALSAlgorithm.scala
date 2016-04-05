@@ -168,6 +168,8 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       )
     }
 
+    if (itemScores.length > 0)
+      logger.info(s"Recommended ${itemScores.length} items for ${query.items}.")
     new PredictedResult(itemScores)
   }
 
