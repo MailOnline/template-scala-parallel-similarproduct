@@ -55,8 +55,7 @@ class DataSource(val dsp: DataSourceParams)
           event.event match {
             case "view" => ViewEvent(
               user = event.entityId,
-              item = event.targetEntityId.get,
-              t = event.eventTime.getMillis)
+              item = event.targetEntityId.get)
             case _ => throw new Exception(s"Unexpected event ${event} is read.")
           }
         } catch {
@@ -79,7 +78,7 @@ case class User()
 
 case class Item(categories: Option[List[String]])
 
-case class ViewEvent(user: String, item: String, t: Long)
+case class ViewEvent(user: String, item: String)
 
 class TrainingData(
   val viewEvents: RDD[ViewEvent]
