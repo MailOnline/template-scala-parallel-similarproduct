@@ -1,5 +1,7 @@
 package org.template.similarproduct
 
+import java.sql.{DriverManager, ResultSet}
+
 import com.github.nscala_time.time.Imports._
 
 import org.joda.time.format.ISODateTimeFormat
@@ -14,7 +16,7 @@ import io.prediction.data._
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
-import org.apache.spark.rdd.RDD
+import org.apache.spark.rdd.{JdbcRDD, RDD}
 import org.apache.spark.storage.StorageLevel._
 
 import grizzled.slf4j.Logger
@@ -22,7 +24,12 @@ import grizzled.slf4j.Logger
 case class DataSourceParams(
   appName: String,
   startTime: String,
-  untilTime: Option[DateTime]
+  untilTime: Option[DateTime],
+  jdbcUrl: String,
+  jdbcUser: String,
+  jdbcPass: String,
+  jdbcTable: String,
+  jdbcPartitions: Option[Long]
 ) extends Params
 
 class DataSource(val dsp: DataSourceParams)
@@ -37,36 +44,30 @@ class DataSource(val dsp: DataSourceParams)
     val dtFormatter =
       ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed()
 
-    val startTime = dtFormatter.parseDateTime(dsp.startTime)
-    logger.info(s"Using events since ${startTime}")
+    val startTime = dtFormatter.parseDateTime(dsp.startTime).getMillis
 
+    val untilTime = DateTime.now.getMillis
+    val partitions = scala.math.min(
+      new Duration(untilTime - startTime).getStandardDays, dsp.jdbcPartitions.getOrElse(4.toLong)).toInt
+
+    val query = s"""
+      select entityId, targetEntityId from ${dsp.jdbcTable}
+      where eventTime >= to_timestamp(?) and eventTime <= to_timestamp(?)
+        and event='view' and entitytype='user' and targetentitytype='item'
+      """
+
+    logger.info(s"Using events since ${dsp.startTime} read from ${dsp.jdbcTable} in ${dsp.jdbcPartitions} partitions")
     // get all "user" "view" "item" events
-    val viewEventsRDD: RDD[ViewEvent] = PEventStore.find(
-      appName = dsp.appName,
-      startTime = Some(startTime),
-      untilTime = dsp.untilTime,
-      entityType = Some("user"),
-      eventNames = Some(List("view")),
-      // targetEntityType is optional field of an event.
-      targetEntityType = Some(Some("item")))(sc)
-      // eventsDb.find() returns RDD[Event]
-      .map { event =>
-        val viewEvent = try {
-          event.event match {
-            case "view" => ViewEvent(
-              user = event.entityId,
-              item = event.targetEntityId.get)
-            case _ => throw new Exception(s"Unexpected event ${event} is read.")
-          }
-        } catch {
-          case e: Exception => {
-            logger.error(s"Cannot convert ${event} to ViewEvent." +
-              s" Exception: ${e}.")
-            throw e
-          }
-        }
-        viewEvent
-      }.cache()
+    val viewEventsRDD: RDD[ViewEvent] = new JdbcRDD(
+      sc,
+      () => DriverManager.getConnection(dsp.jdbcUrl, dsp.jdbcUser, dsp.jdbcPass),
+      query,
+      startTime / 1000,
+      untilTime / 1000,
+      partitions,
+      (r: ResultSet) => ViewEvent(
+        user = r.getString("entityId"),
+        item = r.getString("targetEntityId"))).cache()
 
     new TrainingData(
       viewEvents = viewEventsRDD
