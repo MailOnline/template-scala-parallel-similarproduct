@@ -12,6 +12,7 @@ case class Query(
 ) extends Serializable
 
 case class PredictedResult(
+  tag: Types.EngineTag,
   itemScores: Array[ItemScore]
 ) extends Serializable {
   override def toString: String = itemScores.mkString(",")

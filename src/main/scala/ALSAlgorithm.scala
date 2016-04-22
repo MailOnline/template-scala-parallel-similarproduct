@@ -21,6 +21,7 @@ case class ALSAlgorithmParams(
   seed: Option[Long]) extends Params
 
 class ALSModel(
+  val tag: Types.EngineTag,
   val productFeatures: Map[Int, Array[Double]],
   val itemStringIntMap: BiMap[String, Int],
   val items: Map[Int, Item]
@@ -105,6 +106,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       seed = seed)
 
     new ALSModel(
+      tag = data.tag,
       productFeatures = m.productFeatures.collectAsMap.toMap,
       itemStringIntMap = itemStringIntMap,
       items = items
@@ -170,7 +172,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
 
     if (itemScores.length > 0)
       logger.info(s"Recommended ${itemScores.length} items for ${query.items}.")
-    new PredictedResult(itemScores)
+    new PredictedResult(model.tag, itemScores)
   }
 
   private

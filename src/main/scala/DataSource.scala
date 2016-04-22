@@ -29,7 +29,8 @@ case class DataSourceParams(
   jdbcUser: String,
   jdbcPass: String,
   jdbcTable: String,
-  jdbcPartitions: Option[Long]
+  jdbcPartitions: Option[Long],
+  tag: Option[Types.EngineTag]
 ) extends Params
 
 class DataSource(val dsp: DataSourceParams)
@@ -44,12 +45,15 @@ class DataSource(val dsp: DataSourceParams)
     val dtFormatter =
       ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed()
 
-    val startTime = dtFormatter.parseDateTime(dsp.startTime).getMillis
+    val startTime = dtFormatter.parseDateTime(dsp.startTime)
     val untilTime =
-      dsp.untilTime.map(dtFormatter.parseDateTime(_)).getOrElse(DateTime.now).getMillis
+      dsp.untilTime.map(dtFormatter.parseDateTime(_)).getOrElse(DateTime.now)
 
-    val partitions = scala.math.min(
-      new Duration(untilTime - startTime).getStandardDays, dsp.jdbcPartitions.getOrElse(4.toLong)).toInt
+    val partitions =
+      scala.math.min(
+        new Duration(untilTime.getMillis - startTime.getMillis).getStandardDays,
+        dsp.jdbcPartitions.getOrElse(4.toLong))
+      .toInt
 
     val query = s"""
       select entityId, targetEntityId from ${dsp.jdbcTable}
@@ -61,18 +65,25 @@ class DataSource(val dsp: DataSourceParams)
     // get all "user" "view" "item" events
     val viewEventsRDD: RDD[ViewEvent] = new JdbcRDD(
       sc,
-      () => DriverManager.getConnection(dsp.jdbcUrl, dsp.jdbcUser, dsp.jdbcPass),
+      () => DriverManager.getConnection(
+        dsp.jdbcUrl, dsp.jdbcUser, dsp.jdbcPass),
       query,
-      startTime / 1000,
-      untilTime / 1000,
+      startTime.getMillis / 1000,
+      untilTime.getMillis / 1000,
       partitions,
       (r: ResultSet) => ViewEvent(
         user = r.getString("entityId"),
         item = r.getString("targetEntityId"))).cache()
 
-    new TrainingData(
-      viewEvents = viewEventsRDD
-    )
+    val baseTag =
+      dtFormatter.print(startTime) + "/" + dtFormatter.print(untilTime)
+
+    val tag: String = dsp.tag match {
+      case Some(t) => dsp.tag + "/" + baseTag
+      case None    => baseTag
+    }
+
+    new TrainingData(tag, viewEventsRDD)
   }
 }
 
@@ -83,6 +94,7 @@ case class Item(categories: Option[List[String]])
 case class ViewEvent(user: String, item: String)
 
 class TrainingData(
+  val tag: Types.EngineTag,
   val viewEvents: RDD[ViewEvent]
 ) extends Serializable {
   override def toString = {
