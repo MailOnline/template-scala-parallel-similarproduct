@@ -24,7 +24,7 @@ import grizzled.slf4j.Logger
 case class DataSourceParams(
   appName: String,
   startTime: String,
-  untilTime: Option[DateTime],
+  untilTime: Option[String],
   jdbcUrl: String,
   jdbcUser: String,
   jdbcPass: String,
@@ -45,8 +45,9 @@ class DataSource(val dsp: DataSourceParams)
       ISODateTimeFormat.dateTimeNoMillis().withOffsetParsed()
 
     val startTime = dtFormatter.parseDateTime(dsp.startTime).getMillis
+    val untilTime =
+      dsp.untilTime.map(dtFormatter.parseDateTime(_)).getOrElse(DateTime.now).getMillis
 
-    val untilTime = DateTime.now.getMillis
     val partitions = scala.math.min(
       new Duration(untilTime - startTime).getStandardDays, dsp.jdbcPartitions.getOrElse(4.toLong)).toInt
 
