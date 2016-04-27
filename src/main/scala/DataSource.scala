@@ -79,7 +79,7 @@ class DataSource(val dsp: DataSourceParams)
       dtFormatter.print(startTime) + "/" + dtFormatter.print(untilTime)
 
     val tag: String = dsp.tag match {
-      case Some(t) => dsp.tag + "/" + baseTag
+      case Some(t) => t
       case None    => baseTag
     }
 
