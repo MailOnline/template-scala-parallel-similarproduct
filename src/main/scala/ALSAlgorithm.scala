@@ -14,6 +14,8 @@ import grizzled.slf4j.Logger
 
 import scala.collection.mutable.PriorityQueue
 
+import org.template.similarproduct.Types._
+
 case class ALSAlgorithmParams(
   rank: Int,
   numIterations: Int,
@@ -23,8 +25,7 @@ case class ALSAlgorithmParams(
 class ALSModel(
   val tag: Types.EngineTag,
   val productFeatures: Map[Int, Array[Double]],
-  val itemStringIntMap: BiMap[String, Int],
-  val items: Map[Int, Item]
+  val itemStringIntMap: BiMap[Item, Int]
 ) extends Serializable {
 
   @transient lazy val itemIntStringMap = itemStringIntMap.inverse
@@ -33,9 +34,7 @@ class ALSModel(
     s" productFeatures: [${productFeatures.size}]" +
     s"(${productFeatures.take(2).toList}...)" +
     s" itemStringIntMap: [${itemStringIntMap.size}]" +
-    s"(${itemStringIntMap.take(2).toString}...)]" +
-    s" items: [${items.size}]" +
-    s"(${items.take(2).toString}...)]"
+    s"(${itemStringIntMap.take(2).toString}...)]"
   }
 }
 
@@ -54,14 +53,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       " and Preprator generates PreparedData correctly.")
     // create User and item's String ID to integer index BiMap
     val userStringIntMap = BiMap.stringInt(data.viewEvents.map(_.user))
-
-    val veItems = data.viewEvents.map(_.item).cache()
-    val itemStringIntMap = BiMap.stringInt(veItems)
-
-    // collect Item as Map and convert ID to Int index
-    val items: Map[Int, Item] = veItems.map { case (id) =>
-      (itemStringIntMap(id), Item(None))
-    }.collectAsMap.toMap
+    val itemStringIntMap = BiMap.stringInt(data.viewEvents.map(_.item))
 
     val mllibRatings = data.viewEvents
       .map { r =>
@@ -69,18 +61,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
         val uindex = userStringIntMap.getOrElse(r.user, -1)
         val iindex = itemStringIntMap.getOrElse(r.item, -1)
 
-        if (uindex == -1)
-          logger.info(s"Couldn't convert nonexistent user ID ${r.user}"
-            + " to Int index.")
-
-        if (iindex == -1)
-          logger.info(s"Couldn't convert nonexistent item ID ${r.item}"
-            + " to Int index.")
-
         ((uindex, iindex), 1)
-      }.filter { case ((u, i), v) =>
-        // keep events with valid user and item index
-        (u != -1) && (i != -1)
       }.reduceByKey(_ + _) // aggregate all view events of same user-item pair
       .map { case ((u, i), v) =>
         // MLlibRating requires integer index for user and item
@@ -108,8 +89,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
     new ALSModel(
       tag = data.tag,
       productFeatures = m.productFeatures.collectAsMap.toMap,
-      itemStringIntMap = itemStringIntMap,
-      items = items
+      itemStringIntMap = itemStringIntMap
     )
   }
 
@@ -153,7 +133,6 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
     val filteredScore = indexScores.view.filter { case (i, v) =>
       isCandidateItem(
         i = i,
-        items = model.items,
         categories = query.categories,
         queryList = queryList,
         whiteList = whiteList,
@@ -215,7 +194,6 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
   private
   def isCandidateItem(
     i: Int,
-    items: Map[Int, Item],
     categories: Option[Set[String]],
     queryList: Set[Int],
     whiteList: Option[Set[Int]],
@@ -224,14 +202,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
     whiteList.map(_.contains(i)).getOrElse(true) &&
     blackList.map(!_.contains(i)).getOrElse(true) &&
     // discard items in query as well
-    (!queryList.contains(i)) &&
-    // filter categories
-    categories.map { cat =>
-      items(i).categories.map { itemCat =>
-        // keep this item if has ovelap categories with the query
-        !(itemCat.toSet.intersect(cat).isEmpty)
-      }.getOrElse(false) // discard this item if it has no categories
-    }.getOrElse(true)
+    (!queryList.contains(i))
   }
 
 }

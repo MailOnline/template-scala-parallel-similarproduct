@@ -21,6 +21,8 @@ import org.apache.spark.storage.StorageLevel._
 
 import grizzled.slf4j.Logger
 
+import org.template.similarproduct.Types._
+
 case class DataSourceParams(
   appName: String,
   startTime: String,
@@ -30,7 +32,7 @@ case class DataSourceParams(
   jdbcPass: String,
   jdbcTable: String,
   jdbcPartitions: Option[Long],
-  tag: Option[Types.EngineTag]
+  tag: Option[EngineTag]
 ) extends Params
 
 class DataSource(val dsp: DataSourceParams)
@@ -89,12 +91,10 @@ class DataSource(val dsp: DataSourceParams)
 
 case class User()
 
-case class Item(categories: Option[List[String]])
-
-case class ViewEvent(user: String, item: String)
+case class ViewEvent(user: String, item: Item)
 
 class TrainingData(
-  val tag: Types.EngineTag,
+  val tag: EngineTag,
   val viewEvents: RDD[ViewEvent]
 ) extends Serializable {
   override def toString = {
