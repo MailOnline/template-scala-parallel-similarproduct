@@ -88,8 +88,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       alpha = 1.0,
       seed = seed)
 
-    m.productFeatures.saveAsObjectFile("/tmp/latest-pythia-product-features.ser")
-    m.userFeatures.saveAsObjectFile("/tmp/latest-pythia-user-features.ser")
+    m.productFeatures.map(i => (itemStringIntMap.get(i._1.toString), i._2)).saveAsObjectFile("/tmp/latest-pythia-product-features.ser")
 
     new ALSModel(
       tag = data.tag,
