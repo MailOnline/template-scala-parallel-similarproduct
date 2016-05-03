@@ -16,6 +16,8 @@ import scala.collection.mutable.PriorityQueue
 
 import org.template.similarproduct.Types._
 
+import java.io._
+
 case class ALSAlgorithmParams(
   rank: Int,
   numIterations: Int,
@@ -85,6 +87,9 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       blocks = -1,
       alpha = 1.0,
       seed = seed)
+
+    m.productFeatures.saveAsObjectFile("/tmp/latest-pythia-product-features.ser")
+    m.userFeatures.saveAsObjectFile("/tmp/latest-pythia-user-features.ser")
 
     new ALSModel(
       tag = data.tag,
