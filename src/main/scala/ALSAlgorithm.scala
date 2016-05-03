@@ -16,6 +16,8 @@ import scala.collection.mutable.PriorityQueue
 
 import org.template.similarproduct.Types._
 
+import java.io._
+
 case class ALSAlgorithmParams(
   rank: Int,
   numIterations: Int,
@@ -85,6 +87,16 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       blocks = -1,
       alpha = 1.0,
       seed = seed)
+
+    val file = new File("/tmp/latest-pythia-model.ser")
+    val fos = new FileOutputStream(file)
+    val oos = new ObjectOutputStream(fos)
+    try {
+      oos.writeObject(m)
+    } finally {
+      oos.close()
+      fos.close()
+    }
 
     new ALSModel(
       tag = data.tag,
