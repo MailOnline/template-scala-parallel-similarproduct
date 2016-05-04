@@ -87,7 +87,8 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       alpha = 1.0,
       seed = seed)
 
-    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.collect().map(i => (itemStringIntMap.getOrElse(i._1.toString, -1), i._2)).filter(i => i._1 != -1)
+    val invMap = itemStringIntMap.inverse
+    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.collect().map(i => (invMap.getOrElse(i._1, "-1").toInt, i._2)).filter(i => i._1 != -1)
     val fos = new FileOutputStream("/tmp/product-features.ser")
     val oos = new ObjectOutputStream(fos)
     try {
