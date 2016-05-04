@@ -11,6 +11,7 @@ import org.apache.spark.mllib.recommendation.ALS
 import org.apache.spark.mllib.recommendation.{Rating => MLlibRating}
 
 import grizzled.slf4j.Logger
+import java.io._
 
 import scala.collection.mutable.PriorityQueue
 
@@ -85,6 +86,27 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       blocks = -1,
       alpha = 1.0,
       seed = seed)
+
+    def myToInt(s: String): Int = {
+      try {
+        s.toInt
+      }
+      catch {
+        case e: Exception => -1
+      }
+    }
+
+    val invMap = itemStringIntMap.inverse
+    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.collect().map(i => (myToInt(invMap.getOrElse(i._1, "-1")), i._2)).filter(i => i._1 != -1)
+    val fos = new FileOutputStream("/tmp/product-features.ser")
+    val oos = new ObjectOutputStream(fos)
+    try {
+      oos.writeObject(rawDataFromALS)
+    } finally {
+      oos.close()
+      fos.close()
+    }
+
 
     new ALSModel(
       tag = data.tag,
