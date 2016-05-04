@@ -11,6 +11,7 @@ import org.apache.spark.mllib.recommendation.ALS
 import org.apache.spark.mllib.recommendation.{Rating => MLlibRating}
 
 import grizzled.slf4j.Logger
+import java.io._
 
 import scala.collection.mutable.PriorityQueue
 
@@ -85,6 +86,17 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       blocks = -1,
       alpha = 1.0,
       seed = seed)
+
+    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.cache().collect()
+    val fos = new FileOutputStream("/tmp/product-features.ser")
+    val oos = new ObjectOutputStream(fos)
+    try {
+      oos.writeObject(rawDataFromALS)
+    } finally {
+      oos.close()
+      fos.close()
+    }
+
 
     new ALSModel(
       tag = data.tag,
