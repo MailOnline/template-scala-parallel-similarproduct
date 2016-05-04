@@ -87,7 +87,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       alpha = 1.0,
       seed = seed)
 
-    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.cache().collect()
+    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.collect()
     val fos = new FileOutputStream("/tmp/product-features.ser")
     val oos = new ObjectOutputStream(fos)
     try {
