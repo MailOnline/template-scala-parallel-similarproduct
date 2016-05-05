@@ -49,25 +49,21 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
   @transient lazy val logger = Logger[this.type]
 
   def train(sc: SparkContext, data: PreparedData): ALSModel = {
-    require(!data.viewEvents.take(1).isEmpty,
-      s"viewEvents in PreparedData cannot be empty." +
+    require(!data.itemRatings.take(1).isEmpty,
+      s"itemRatings in PreparedData cannot be empty." +
       " Please check if DataSource generates TrainingData" +
       " and Preprator generates PreparedData correctly.")
     // create User and item's String ID to integer index BiMap
-    val userStringIntMap = BiMap.stringInt(data.viewEvents.map(_.user))
-    val itemStringIntMap = BiMap.stringInt(data.viewEvents.map(_.item))
+    val userStringIntMap = BiMap.stringInt(data.itemRatings.map(_.user))
+    val itemStringIntMap = BiMap.stringInt(data.itemRatings.map(_.item))
 
-    val mllibRatings = data.viewEvents
+    val mllibRatings = data.itemRatings
       .map { r =>
         // Convert user and item String IDs to Int index for MLlib
         val uindex = userStringIntMap.getOrElse(r.user, -1)
         val iindex = itemStringIntMap.getOrElse(r.item, -1)
 
-        ((uindex, iindex), 1)
-      }.reduceByKey(_ + _) // aggregate all view events of same user-item pair
-      .map { case ((u, i), v) =>
-        // MLlibRating requires integer index for user and item
-        MLlibRating(u, i, v)
+        MLlibRating(uindex, iindex, r.rating)
       }
       .cache()
 

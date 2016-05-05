@@ -58,14 +58,15 @@ class DataSource(val dsp: DataSourceParams)
       .toInt
 
     val query = s"""
-      select entityId, targetEntityId from ${dsp.jdbcTable}
+      select entityId, targetEntityId, count(*)*1.0 as rating from ${dsp.jdbcTable}
       where eventTime >= to_timestamp(?) and eventTime <= to_timestamp(?)
         and event='view' and entitytype='user' and targetentitytype='item'
+      group by entityId, targetEntityId
       """
 
     logger.info(s"Using events since ${dsp.startTime} read from ${dsp.jdbcTable} in ${dsp.jdbcPartitions} partitions")
     // get all "user" "view" "item" events
-    val viewEventsRDD: RDD[ViewEvent] = new JdbcRDD(
+    val itemRatingsRDD: RDD[ItemRating] = new JdbcRDD(
       sc,
       () => DriverManager.getConnection(
         dsp.jdbcUrl, dsp.jdbcUser, dsp.jdbcPass),
@@ -73,9 +74,10 @@ class DataSource(val dsp: DataSourceParams)
       startTime.getMillis / 1000,
       untilTime.getMillis / 1000,
       partitions,
-      (r: ResultSet) => ViewEvent(
+      (r: ResultSet) => ItemRating(
         user = r.getString("entityId"),
-        item = r.getString("targetEntityId"))).cache()
+        item = r.getString("targetEntityId"),
+        rating = r.getDouble("rating"))).cache()
 
     val baseTag =
       dtFormatter.print(startTime) + "/" + dtFormatter.print(untilTime)
@@ -85,19 +87,19 @@ class DataSource(val dsp: DataSourceParams)
       case None    => baseTag
     }
 
-    new TrainingData(tag, viewEventsRDD)
+    new TrainingData(tag, itemRatingsRDD)
   }
 }
 
 case class User()
 
-case class ViewEvent(user: String, item: Item)
+case class ItemRating(user: String, item: Item, rating: Double)
 
 class TrainingData(
   val tag: EngineTag,
-  val viewEvents: RDD[ViewEvent]
+  val itemRatings: RDD[ItemRating]
 ) extends Serializable {
   override def toString = {
-    s"viewEvents: [${viewEvents.count()}] (${viewEvents.take(2).toList}...)"
+    s"itemRatings: [${itemRatings.count()}] (${itemRatings.take(2).toList}...)"
   }
 }
