@@ -21,7 +21,8 @@ case class ALSAlgorithmParams(
   rank: Int,
   numIterations: Int,
   lambda: Double,
-  seed: Option[Long]) extends Params
+  seed: Option[Long],
+  productFeaturesFile: Option[String]) extends Params
 
 class ALSModel(
   val tag: Types.EngineTag,
@@ -87,26 +88,33 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       alpha = 1.0,
       seed = seed)
 
-    def myToInt(s: String): Int = {
-      try {
-        s.toInt
-      }
-      catch {
-        case e: Exception => -1
+    ap.productFeaturesFile match {
+      case None => {}
+      case Some(fp) => {
+        val invMap = itemStringIntMap.inverse
+        def internalIdToExternal(i: Int): Int = {
+          try {
+            invMap.getOrElse(i, "-1").toInt
+          }
+          catch {
+            case e: Exception => -1
+          }
+        }
+
+        val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures
+          .collect()
+          .map(i => (internalIdToExternal(i._1), i._2))
+          .filter(i => i._1 != -1)
+        val fos = new FileOutputStream(fp)
+        val oos = new ObjectOutputStream(fos)
+        try {
+          oos.writeObject(rawDataFromALS)
+        } finally {
+          oos.close()
+          fos.close()
+        }
       }
     }
-
-    val invMap = itemStringIntMap.inverse
-    val rawDataFromALS: Array[(Int, Array[Double])] = m.productFeatures.collect().map(i => (myToInt(invMap.getOrElse(i._1, "-1")), i._2)).filter(i => i._1 != -1)
-    val fos = new FileOutputStream("/tmp/product-features.ser")
-    val oos = new ObjectOutputStream(fos)
-    try {
-      oos.writeObject(rawDataFromALS)
-    } finally {
-      oos.close()
-      fos.close()
-    }
-
 
     new ALSModel(
       tag = data.tag,
