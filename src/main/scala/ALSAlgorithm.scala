@@ -51,7 +51,7 @@ class ALSAlgorithm(val ap: ALSAlgorithmParams)
       s"viewEvents in PreparedData cannot be empty." +
       " Please check if DataSource generates TrainingData" +
       " and Preprator generates PreparedData correctly.")
-    // create User and item's String ID to integer index BiMap
+
     val userStringIntMap = BiMap.stringInt(data.viewEvents.map(_.user))
     val itemStringIntMap = BiMap.stringInt(data.viewEvents.map(_.item))
 
