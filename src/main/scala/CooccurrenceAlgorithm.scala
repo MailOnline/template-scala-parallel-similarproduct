@@ -14,9 +14,9 @@ case class CooccurrenceAlgorithmParams(
 ) extends Params
 
 class CooccurrenceModel(
+  val tag: Types.EngineTag,
   val topCooccurrences: Map[Int, Array[(Int, Int)]],
-  val itemStringIntMap: BiMap[String, Int],
-  val items: Map[Int, Item]
+  val itemStringIntMap: BiMap[String, Int]
 ) extends Serializable {
   @transient lazy val itemIntStringMap = itemStringIntMap.inverse
 
@@ -39,15 +39,10 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
       itemStringIntMap = itemStringIntMap
     )
 
-    // collect Item as Map and convert ID to Int index
-    val items: Map[Int, Item] = data.viewEvents.map(_.item).map { case (id) =>
-      (itemStringIntMap(id), Item(None))
-    }.collectAsMap.toMap
-
     new CooccurrenceModel(
+      tag = data.tag,
       topCooccurrences = topCooccurrences,
-      itemStringIntMap = itemStringIntMap,
-      items = items
+      itemStringIntMap = itemStringIntMap
     )
 
   }
@@ -115,7 +110,6 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
       .filter { case (i, v) =>
         isCandidateItem(
           i = i,
-          items = model.items,
           categories = query.categories,
           queryList = queryList,
           whiteList = whiteList,
@@ -131,14 +125,13 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
         )
       }
 
-    new PredictedResult(itemScores)
+    new PredictedResult(model.tag, itemScores)
 
   }
 
   private
   def isCandidateItem(
     i: Int,
-    items: Map[Int, Item],
     categories: Option[Set[String]],
     queryList: Set[Int],
     whiteList: Option[Set[Int]],
@@ -147,14 +140,7 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
     whiteList.map(_.contains(i)).getOrElse(true) &&
     blackList.map(!_.contains(i)).getOrElse(true) &&
     // discard items in query as well
-    (!queryList.contains(i)) &&
-    // filter categories
-    categories.map { cat =>
-      items(i).categories.map { itemCat =>
-        // keep this item if has ovelap categories with the query
-        !(itemCat.toSet.intersect(cat).isEmpty)
-      }.getOrElse(false) // discard this item if it has no categories
-    }.getOrElse(true)
+    (!queryList.contains(i))
   }
 
 }
