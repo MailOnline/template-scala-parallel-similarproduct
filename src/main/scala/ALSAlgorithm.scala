@@ -31,6 +31,7 @@ class ALSModel(
   @transient lazy val itemIntStringMap = itemStringIntMap.inverse
 
   override def toString = {
+    s"tag: ${tag}" +
     s" productFeatures: [${productFeatures.size}]" +
     s"(${productFeatures.take(2).toList}...)" +
     s" itemStringIntMap: [${itemStringIntMap.size}]" +

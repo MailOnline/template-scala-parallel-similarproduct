@@ -21,8 +21,11 @@ class CooccurrenceModel(
   @transient lazy val itemIntStringMap = itemStringIntMap.inverse
 
   override def toString(): String = {
-    val s = topCooccurrences.mapValues { v => v.mkString(",") }
-    s.toString
+    s"tag: ${tag}" +
+    s" topCooccurrences: [${topCooccurrences.size}]" +
+    s"(${topCooccurrences.take(2).toList}...)" +
+    s" itemStringIntMap: [${itemStringIntMap.size}]" +
+    s"(${itemStringIntMap.take(2).toString}...)"
   }
 }
 
