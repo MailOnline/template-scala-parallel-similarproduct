@@ -4,6 +4,8 @@ import io.prediction.controller.P2LAlgorithm
 import io.prediction.controller.Params
 import io.prediction.data.storage.BiMap
 
+import grizzled.slf4j.Logger
+
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
@@ -31,6 +33,8 @@ class CooccurrenceModel(
 
 class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
   extends P2LAlgorithm[PreparedData, CooccurrenceModel, Query, PredictedResult] {
+
+  @transient lazy val logger = Logger[this.type]
 
   def train(sc: SparkContext, data: PreparedData): CooccurrenceModel = {
 
@@ -127,6 +131,11 @@ class CooccurrenceAlgorithm(val ap: CooccurrenceAlgorithmParams)
           score = count
         )
       }
+
+    if (itemScores.length > 0)
+      logger.info(s"Recommended ${itemScores.length} items for ${query.items}.")
+    else
+      logger.info(s"No productFeatures vector for query items ${query.items}.")
 
     new PredictedResult(model.tag, itemScores)
 
