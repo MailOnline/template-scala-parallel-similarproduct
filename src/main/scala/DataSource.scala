@@ -61,6 +61,7 @@ class DataSource(val dsp: DataSourceParams)
       select entityId, targetEntityId from ${dsp.jdbcTable}
       where eventTime >= to_timestamp(?) and eventTime <= to_timestamp(?)
         and event='view' and entitytype='user' and targetentitytype='item'
+        and targetentityid <> '999999'
       """
 
     logger.info(s"Using events since ${dsp.startTime} read from ${dsp.jdbcTable} in ${dsp.jdbcPartitions} partitions")
