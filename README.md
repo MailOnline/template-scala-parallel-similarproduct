@@ -20,3 +20,7 @@ We use JdbcRDD directly (all these are required):
 
 All settings are populated at training time via
 https://github.com/MailOnline/pythia/blob/master/playbooks/train.yml
+
+https://github.com/MailOnline/pythia/blob/master/playbooks/compile.yml
+playbook installs the latest engine release tagged as `v*` from this
+repo to the PredictionIO server.
